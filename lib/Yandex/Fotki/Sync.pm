@@ -22,6 +22,7 @@ Scanning directory path passed as arg
 returns Mojo::Collection with image files
 =cut
 sub scan{
+    
 	my ($self, $path) = (shift, shift);
 	$path = '.' unless defined $path;
 	
@@ -38,5 +39,4 @@ sub scan{
 	return $res;
 }
 
-
-1
+1;

@@ -1,0 +1,7 @@
+SWITCH TO UTF8
+DIR ENCODED:.
+DIR ENCODED:..
+DIR ENCODED:image 2.jpg
+DIR ENCODED:image 3 с русским текстом.jpg
+DIR ENCODED:image1.jpg
+DIR ENCODED:non image3.txt
