@@ -13,9 +13,11 @@ has file_qr => sub{ qr/\.(jpg|png|bmp|gif)/i };
 sub start{
 	#croak 'Not implemented yet!';
 	my $self = shift;
-	my @img = $self->scan;
+	my $img = $self->scan;
 	
-	say Dumper @img;
+	#say Dumper @img;
+	for my $file (@{$img})
+	{ say  $file->abs_path ;}
 }
 =head 3
 Scanning directory path passed as arg
