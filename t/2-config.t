@@ -34,7 +34,7 @@ $sync->save_config;
 
 is -f $sync->config_path, 1, 'Config file exists after save';
 
-$sync->login('');
+$sync->login('dump_test_login');
 $sync->password('');
 $sync->token('');
 

@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use 5.016;
+use 5.014;
 use utf8;
 use lib 'lib';
 use Yandex::Fotki::Sync;

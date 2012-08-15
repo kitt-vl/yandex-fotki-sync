@@ -59,22 +59,23 @@ sub scan{
 sub load_config{
     my $self = shift;
     my $yaml = YAML::Tiny->read($self->config_path);
-    $self->login($yaml->[0]->{login}); 
-    $self->token($yaml->[0]->{token});
+    #$self->login($yaml->[0]->{login}); 
+    $self->token($yaml->[0]->{$self->login}->{token});
 }
 
 
 sub save_config{
     my $self = shift;
     my $yaml = YAML::Tiny->new;
-    $yaml->[0]->{login} = $self->login;
-    $yaml->[0]->{token} = $self->token;
+    $yaml->read($self->config_path);
+    
+    $yaml->[0]->{$self->login} = { token => $self->token};
     $yaml->write( $self->config_path );    
 }
 
 sub auth{
     my $self = shift;
-    my $auth_id = 'f6612965aba347c986dc52361b655f08';
+    #my $auth_id = 'f6612965aba347c986dc52361b655f08';
     
     my $ua = Mojo::UserAgent->new;
     $ua->max_redirects(50);
@@ -87,9 +88,14 @@ sub auth{
     die "Cant find AUTHORIZE FORM!" unless $node;
     
     my $auth2_url = $node->{action};
-    say $auth2_url;
+    #say $auth2_url;
     
-    $tx = $ua->post_form($auth2_url => {login => 'xzombi', passwd => 'kityra0216531', allow => ''});
-    say 'POST RES: '. $tx->res->body;
+    $tx = $ua->post_form($auth2_url => {login => $self->login, passwd => $self->password, allow => ''});
+    my ($_token) = $tx->req->url->fragment =~ /access_token\=(.*?)\&/;
+    
+    die "No access token return, body is:\n" . $tx->res->dom->at('body')->all_text unless $_token;
+    
+    #say 'Token is ' . $_token;
+    $self->token($_token);
 }
 1;
