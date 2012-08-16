@@ -9,27 +9,36 @@ use IO::Easy;
 use File::Spec::Functions;
 use File::HomeDir;
 use YAML::Tiny;
-
+use Getopt::Long qw(GetOptionsFromArray);
+use Encode;
 use Data::Dumper;
-
+#my $auth_id = 'f6612965aba347c986dc52361b655f08';
 has version => '1.0';
 
 has file_qr => sub{ qr/\.(jpg|png|bmp|gif)/i };
 
 has base_url => 'api-fotki.yandex.ru';
 has auth_url => 'https://oauth.yandex.ru/authorize?response_type=token&client_id=5e0c4dfec7104aba81a35bd7678a993b&redirect_uri=https://oauth.yandex.ru/verification_code';
+has ua => sub { my $ua = Mojo::UserAgent->new;
+                $ua->max_redirects(50);
+                $ua->name('Yandex::Fotki::Sync/' . shift->version);
+                return $ua; 
+};
 
 has home_path => sub{ File::HomeDir->my_home };
 has config_path => sub{ catfile(shift->home_path, 'yf-sync.yml') };
+has work_path => '';
 
 has login => '';
 has password => '';
 has token => '';
 
+has options => sub { \@ARGV };
+
+has service_document => '';
 
 sub start{
-    binmode(STDOUT, ':unix');
-    
+    binmode(STDOUT, ':unix');    
 	my $self = shift;
     $self->auth;
 }
@@ -59,15 +68,15 @@ sub scan{
 sub load_config{
     my $self = shift;
     my $yaml = YAML::Tiny->read($self->config_path);
-    #$self->login($yaml->[0]->{login}); 
+
     $self->token($yaml->[0]->{$self->login}->{token});
+    $self->password('') if $self->token;
 }
 
 
 sub save_config{
     my $self = shift;
-    my $yaml = YAML::Tiny->new;
-    $yaml->read($self->config_path);
+    my $yaml = YAML::Tiny->read($self->config_path) // YAML::Tiny->new;
     
     $yaml->[0]->{$self->login} = { token => $self->token};
     $yaml->write( $self->config_path );    
@@ -75,27 +84,42 @@ sub save_config{
 
 sub auth{
     my $self = shift;
-    #my $auth_id = 'f6612965aba347c986dc52361b655f08';
-    
-    my $ua = Mojo::UserAgent->new;
-    $ua->max_redirects(50);
-    $ua->name('Yandex::Fotki::Sync/' . $self->version);
-    
+      
+    my $ua = $self->ua;    
     my $tx = $ua->get( $self->auth_url);
-    #say $tx->res->body;
     
     my $node = $tx->res->dom->at('form.b-authorize-form');
-    die "Cant find AUTHORIZE FORM!" unless $node;
+    warn "Cant find AUTHORIZE FORM!" unless $node;
     
     my $auth2_url = $node->{action};
-    #say $auth2_url;
     
     $tx = $ua->post_form($auth2_url => {login => $self->login, passwd => $self->password, allow => ''});
-    my ($_token) = $tx->req->url->fragment =~ /access_token\=(.*?)\&/;
+    my ($_token) = ($tx->req->url->fragment // '') =~ /access_token\=(.*?)\&/; 
+
+    $self->token($_token // '');
+}
+
+sub parse_options{
+    my $self = shift;
+    my $opt = $self->options;
+    my ($login, $password, $dir);
+    my $ret = GetOptionsFromArray( $opt, 
+                                'login=s' => \$login,
+                                'password=s' => \$password,
+                                'dir=s' => \$dir);
+    $self->login($login);
+    $self->password($password);
+    $self->work_path($dir);
+}
+
+sub load_service_document{
+    my $self = shift;
+    my $ua = $self->ua;
+    my $service_url = 'http://api-fotki.yandex.ru/api/users/' . $self->login . '/';
+    my $tx = $ua->get($service_url);
     
-    die "No access token return, body is:\n" . $tx->res->dom->at('body')->all_text unless $_token;
-    
-    #say 'Token is ' . $_token;
-    $self->token($_token);
+    my $tmp = $tx->res->body;    
+    utf8::decode($tmp);    
+    $self->service_document($tmp) if $tx->success;
 }
 1;
