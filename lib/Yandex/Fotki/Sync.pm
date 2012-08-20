@@ -19,6 +19,8 @@ has file_qr => sub{ qr/\.(jpg|png|bmp|gif)/i };
 
 has base_url => 'api-fotki.yandex.ru';
 has auth_url => 'https://oauth.yandex.ru/authorize?response_type=token&client_id=5e0c4dfec7104aba81a35bd7678a993b&redirect_uri=https://oauth.yandex.ru/verification_code';
+has base_user_url => sub { my $self = shift; return join('/', $self->base_url, 'api', 'users', $self->login); };
+
 has ua => sub { my $ua = Mojo::UserAgent->new;
                 $ua->max_redirects(50);
                 $ua->name('Yandex::Fotki::Sync/' . shift->version);
@@ -85,6 +87,8 @@ sub save_config{
 sub auth{
     my $self = shift;
       
+    die 'Empty login!' unless $self->login;
+    
     my $ua = $self->ua;    
     my $tx = $ua->get( $self->auth_url);
     
@@ -114,8 +118,10 @@ sub parse_options{
 
 sub load_service_document{
     my $self = shift;
+    die 'Empty login!' unless $self->login;
+    
     my $ua = $self->ua;
-    my $service_url = 'http://api-fotki.yandex.ru/api/users/' . $self->login . '/';
+    my $service_url =  $self->base_user_url . '/';
     my $tx = $ua->get($service_url);
     
     my $tmp = $tx->res->body;    
@@ -127,5 +133,27 @@ sub upload_photo{
     my ($self, $path, $album) = (shift, shift, shift);
     
     
+}
+
+sub create_album{
+	my ($self, $album) = (shift, shift);
+	die 'Empty login!' unless $self->login;
+	
+	my $ua = $self->ua;
+	my $post_url =  $self->base_user_url . '/albums/';
+	my $atom_album =<<"ALBUM"
+<entry xmlns="http://www.w3.org/2005/Atom" xmlns:f="yandex:fotki">
+  <title>$album</title>
+  <summary>$album</summary>
+</entry>	
+ALBUM
+;
+	my $tx = $ua->post($post_url => { 	'Content-Type' => 'application/atom+xml; charset=utf-8; type=entry',
+										'Authorization' => 'OAuth ' . $self->token
+									}
+								 => $atom_album
+					);
+	say 'create_album code is ' . $tx->res->code;
+	return $tx->res->body;
 }
 1;
