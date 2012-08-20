@@ -122,4 +122,10 @@ sub load_service_document{
     utf8::decode($tmp);    
     $self->service_document($tmp) if $tx->success;
 }
+
+sub upload_photo{
+    my ($self, $path, $album) = (shift, shift, shift);
+    
+    
+}
 1;
