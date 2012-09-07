@@ -97,6 +97,14 @@ sub auth{
     
     my $auth2_url = $node->{action};
     
+    unless($auth2_url =~ /^http/)
+    {
+		my $auth_full = Mojo::URL->new($tx->req->url);
+		$auth_full->path($auth2_url);
+		$auth2_url =  $auth_full;
+		
+	}
+    
     $tx = $ua->post_form($auth2_url => {login => $self->login, passwd => $self->password, allow => ''});
     my ($_token) = ($tx->req->url->fragment // '') =~ /access_token\=(.*?)\&/; 
 
