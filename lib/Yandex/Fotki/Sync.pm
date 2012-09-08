@@ -2,6 +2,8 @@ use strict;
 use warnings;
 
 package Yandex::Fotki::Sync;
+use Yandex::Fotki::Album;
+
 use Mojo::Base -base;
 use Mojo::UserAgent;
 use Mojo::Collection;
@@ -15,11 +17,20 @@ use Data::Dumper;
 #my $auth_id = 'f6612965aba347c986dc52361b655f08';
 has version => '1.0';
 
-has file_qr => sub{ qr/\.(jpg|png|bmp|gif)/i };
+has file_qr => sub{ qr/\.(jpg|png|bmp|gif)$/i };
 
 has base_url => 'api-fotki.yandex.ru';
 has auth_url => 'https://oauth.yandex.ru/authorize?response_type=token&client_id=5e0c4dfec7104aba81a35bd7678a993b&redirect_uri=https://oauth.yandex.ru/verification_code';
+
 has base_user_url => sub { my $self = shift; return join('/', $self->base_url, 'api', 'users', $self->login); };
+
+has albums_url => sub{ 	my $self = shift; 
+						$self->load_service_document unless $self->service_document;
+						my $dom = Mojo::DOM->new($self->service_document);
+						my $link = $dom->at('collection[id="album-list"]');
+						return $link->{href} if $link;
+						
+};
 
 has ua => sub { my $ua = Mojo::UserAgent->new;
                 $ua->max_redirects(50);
@@ -38,6 +49,7 @@ has token => '';
 has options => sub { \@ARGV };
 
 has service_document => '';
+has albums => sub { Mojo::Collection->new; };
 
 sub start{
     binmode(STDOUT, ':unix');    
@@ -93,7 +105,7 @@ sub auth{
     my $tx = $ua->get( $self->auth_url);
     
     my $node = $tx->res->dom->at('form.b-authorize-form');
-    warn "Cant find AUTHORIZE FORM!" unless $node;
+    die "Cant find AUTHORIZE FORM!" unless $node;
     
     my $auth2_url = $node->{action};
     
@@ -139,7 +151,7 @@ sub load_service_document{
 
 sub upload_photo{
     my ($self, $path, $album) = (shift, shift, shift);
-    
+    die 'upload_photo not implemented yet!'
     
 }
 
@@ -153,7 +165,7 @@ sub create_album{
 <entry xmlns="http://www.w3.org/2005/Atom" xmlns:f="yandex:fotki">
   <title>$album</title>
   <summary>$album</summary>
-</entry>	
+</entry>
 ALBUM
 ;
 	my $tx = $ua->post($post_url => { 	'Content-Type' => 'application/atom+xml; charset=utf-8; type=entry',
@@ -161,7 +173,41 @@ ALBUM
 									}
 								 => $atom_album
 					);
-	say 'create_album code is ' . $tx->res->code;
-	return $tx->res->body;
+	#say 'create_album code is ' . $tx->res->code;
+	#return $tx->res->body;
+	return Yandex::Fotki::Album->new($tx->res->body);
 }
+
+sub delete_album{
+	my ($self, $album) = (shift, shift);
+	
+	my $ua = $self->ua;
+	my $tx = $ua->delete($album->link_self, {'Authorization' => 'OAuth ' . $self->token});
+	return $tx->res->code;
+}
+
+sub load_albums{
+	my $self = shift;
+	
+	my $ua = $self->ua;
+	my $tmp_url = $self->albums_url;
+	
+	while(1)
+	{
+		my $tx = $ua->get($tmp_url);
+		my $entries = $tx->res->dom->find('entry');
+		for my $entry( @$entries)
+		{
+			my $album = Yandex::Fotki::Album->new($entry->to_xml);
+			push @{$self->albums}, $album;
+		}
+		
+		my $next = $tx->res->dom->at('link[rel="next"]');
+		last unless $next;
+		
+		$tmp_url = $next->{href} if $next;
+	}
+	
+}
+
 1;
