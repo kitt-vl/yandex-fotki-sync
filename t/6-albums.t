@@ -3,7 +3,7 @@ use warnings;
 use utf8;
 use Data::Dumper;
 
-use Test::More tests => 12;
+use Test::More tests => 17;
 use lib 'lib';
 
 binmode(STDOUT,':unix');
@@ -38,8 +38,18 @@ $sync->load_albums;
 
 is scalar @{$sync->albums}, 3, 'Right number of albums';
 
+
+ok $sync->albums->grep(sub { $_->title eq 'Неразобраннное' } ), 'Right album title in collection';
+ok $sync->albums->grep(sub{ $_->title eq 'test album 2' }), 'Right album title in collection';
+ok $sync->albums->grep(sub{ $_->title eq $test_name }), 'Right album title in collection';
+
 my $del_code = $sync->delete_album($album);
 is $del_code, 204, 'Right delete code';
+
 my $del_code2 = $sync->delete_album($album2);
 is $del_code2, 204, 'Right delete code';
+
+$sync->load_albums;
+is scalar @{$sync->albums}, 1, 'Right number of albums after delete';
+
 #print Dumper($album);

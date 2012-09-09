@@ -183,6 +183,15 @@ sub delete_album{
 	
 	my $ua = $self->ua;
 	my $tx = $ua->delete($album->link_self, {'Authorization' => 'OAuth ' . $self->token});
+	
+	if($tx->res->code == 204)
+	{
+		$self->albums->each(sub {
+		  my ($e, $count) = @_;
+		  splice @{$self->albums}, $count-1 if $e->id eq $album->id;
+		});	
+	}
+	
 	return $tx->res->code;
 }
 
@@ -191,11 +200,13 @@ sub load_albums{
 	
 	my $ua = $self->ua;
 	my $tmp_url = $self->albums_url;
+	$self->albums(Mojo::Collection->new);
 	
-	while(1)
+	while($tmp_url)
 	{
 		my $tx = $ua->get($tmp_url);
 		my $entries = $tx->res->dom->find('entry');
+		
 		for my $entry( @$entries)
 		{
 			my $album = Yandex::Fotki::Album->new($entry->to_xml);
@@ -203,9 +214,15 @@ sub load_albums{
 		}
 		
 		my $next = $tx->res->dom->at('link[rel="next"]');
-		last unless $next;
 		
-		$tmp_url = $next->{href} if $next;
+		if($next)
+		{
+			$tmp_url = $next->{href};
+		}
+		else
+		{
+			$tmp_url = '';
+		}			
 	}
 	
 }

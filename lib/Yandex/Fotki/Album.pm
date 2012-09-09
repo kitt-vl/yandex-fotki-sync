@@ -33,7 +33,7 @@ sub new{
 
 sub parse{
 	my ($self, $xml) = (shift, shift);
-	
+	utf8::decode($xml); 
 	my $dom = Mojo::DOM->new($xml);
 	$self->id($dom->entry->id->text);
 	$self->author($dom->entry->author->name->text);
