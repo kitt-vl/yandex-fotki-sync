@@ -173,8 +173,7 @@ ALBUM
 									}
 								 => $atom_album
 					);
-	#say 'create_album code is ' . $tx->res->code;
-	#return $tx->res->body;
+
 	return Yandex::Fotki::Album->new($tx->res->body);
 }
 
@@ -225,6 +224,27 @@ sub load_albums{
 		}			
 	}
 	
+}
+
+sub hierarhy_albums{
+	my $self = shift;
+	
+	my $new_collection = Mojo::Collection->new;
+	
+	for my $cur_album (@{$self->albums})
+	{
+		push @$new_collection, $cur_album && next unless $cur_album->link_parent;
+		
+		my $parent = $self->albums->first(sub{ $_->link_self eq $cur_album->link_parent });
+			
+		warn 'No parent album with link ' . $cur_album->link_parent && next unless $parent;
+			
+		$cur_album->parent($parent);
+		push @{$parent->childs}, $cur_album;
+		
+	}
+	
+	$self->albums($new_collection);
 }
 
 1;

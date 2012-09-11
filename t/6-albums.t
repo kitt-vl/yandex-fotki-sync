@@ -36,7 +36,7 @@ ok length($album2->id), 'New album has id';
 
 $sync->load_albums;
 
-is scalar @{$sync->albums}, 3, 'Right number of albums';
+is scalar @{$sync->albums}, 6, 'Right number of albums';
 
 
 ok $sync->albums->grep(sub { $_->title eq 'Неразобраннное' } ), 'Right album title in collection';
@@ -50,6 +50,11 @@ my $del_code2 = $sync->delete_album($album2);
 is $del_code2, 204, 'Right delete code';
 
 $sync->load_albums;
-is scalar @{$sync->albums}, 1, 'Right number of albums after delete';
+is scalar @{$sync->albums}, 4, 'Right number of albums after delete';
 
-#print Dumper($album);
+$sync->hierarhy_albums;
+
+is scalar @{$sync->albums}, 1, 'Right 1st level hierarhy numbers of albums';
+
+
+#print Dumper($sync->albums);
