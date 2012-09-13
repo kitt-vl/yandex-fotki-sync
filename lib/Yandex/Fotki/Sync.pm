@@ -8,6 +8,7 @@ use Mojo::Base -base;
 use Mojo::UserAgent;
 use Mojo::Collection;
 use IO::Easy;
+use File::Spec;
 use File::Spec::Functions;
 use File::HomeDir;
 use YAML::Tiny;
@@ -210,13 +211,14 @@ sub load_albums{
 		{
 			my $album = Yandex::Fotki::Album->new($entry->to_xml);
 			push @{$self->albums}, $album;
+			#say 'Album link: '.$album->link_self;
 		}
 		
-		my $next = $tx->res->dom->at('link[rel="next"]');
+		my $next_page = $tx->res->dom->at('link[rel="next"]');
 		
-		if($next)
+		if($next_page)
 		{
-			$tmp_url = $next->{href};
+			$tmp_url = $next_page->{href};
 		}
 		else
 		{
@@ -224,27 +226,32 @@ sub load_albums{
 		}			
 	}
 	
-}
-
-sub hierarhy_albums{
-	my $self = shift;
-	
-	my $new_collection = Mojo::Collection->new;
-	
+	#build hierarhy
 	for my $cur_album (@{$self->albums})
 	{
-		push @$new_collection, $cur_album && next unless $cur_album->link_parent;
-		
 		my $parent = $self->albums->first(sub{ $_->link_self eq $cur_album->link_parent });
-			
-		warn 'No parent album with link ' . $cur_album->link_parent && next unless $parent;
-			
+		
+		warn 'No parent album with link ' . $cur_album->link_parent and next unless $parent;
+		
 		$cur_album->parent($parent);
 		push @{$parent->childs}, $cur_album;
-		
 	}
 	
-	$self->albums($new_collection);
+	#build local path from parents
+	for my $cur_album (@{$self->albums})
+	{
+		$cur_album->build_local_path;
+	}
+	
 }
 
+sub find_album_by_path{
+	my ($self, $path) = (shift, shift);
+
+	#my (undef, $dir, undef) = File::Spec->splitpath(File::Spec->abs2rel($path));
+	$path = join '\\', File::Spec->splitdir($path);
+
+	return $self->albums->first( sub{ $_->local_path eq $path } );	
+	
+}
 1;

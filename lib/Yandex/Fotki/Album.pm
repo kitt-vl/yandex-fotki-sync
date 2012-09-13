@@ -22,8 +22,10 @@ has img => '';
 has protected => '';
 has image_count => '';
 has link_parent => '';
+
 has parent => undef;
 has childs => sub { Mojo::Collection->new };
+has local_path => '';
 
 sub new{
 	my ($class, $xml) = (shift, shift);
@@ -50,6 +52,20 @@ sub parse{
 	
 	my $parent = $dom->at('link[rel="album"]');
 	$self->link_parent($parent->{href}) if $parent;
+}
+
+sub build_local_path{
+	my $self = shift;
+	my $path = $self->title;
+	my $parent = $self->parent;
+	while($parent)
+	{
+		$path = $parent->title . '\\' . $path  ;
+		$parent = $parent->parent;
+	}
+	
+	$self->local_path($path);
+	
 }
 
 1;
