@@ -3,7 +3,7 @@ use warnings;
 use utf8;
 use Data::Dumper;
 
-use Test::More tests => 24;
+use Test::More tests => 23;
 use lib 'lib';
 
 binmode(STDOUT,':unix');
@@ -54,16 +54,16 @@ is $del_code2, 204, 'Right delete code';
 $sync->load_albums;
 is scalar @{$sync->albums}, 4, 'Right number of albums after delete';
 
-$sync->hierarhy_albums;
+#$sync->hierarhy_albums;
 
-is scalar @{$sync->albums}, 1, 'Right 1st level hierarhy numbers of albums';
-is $sync->albums->first->title, 'Неразобраннное', 'Right 1st level hierarhy album title';
+my $first = $sync->find_album_by_path('Неразобраннное');
+is $first->title, 'Неразобраннное', 'Right 1st level hierarhy album title';
 
-is $sync->albums->first->childs->size, 1, 'Right 1st level hierarhy album childs collection';
-is $sync->albums->first->childs->first->title, 'level 2', 'Right 2nd level hierarhy album title';
-is $sync->albums->first->childs->first->childs->size, 2, 'Right 2st level hierarhy album childs collection';
+is $first->childs->size, 1, 'Right 1st level hierarhy album childs collection';
+is $first->childs->first->title, 'level 2', 'Right 2nd level hierarhy album title';
+is $first->childs->first->childs->size, 2, 'Right 2st level hierarhy album childs collection';
 
-is $sync->albums->first->childs->first->childs->[0]->title, 'уровень 3-2', 'Right 3rd level hierarhy album title';
-is $sync->albums->first->childs->first->childs->[1]->title, 'level 3-1', 'Right 3rd level hierarhy album title';
+is $first->childs->first->childs->[0]->title, 'уровень 3-2', 'Right 3rd level hierarhy album title';
+is $first->childs->first->childs->[1]->title, 'level 3-1', 'Right 3rd level hierarhy album title';
 
 #print Dumper($sync->albums);

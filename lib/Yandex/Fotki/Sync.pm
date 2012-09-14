@@ -3,6 +3,7 @@ use warnings;
 
 package Yandex::Fotki::Sync;
 use Yandex::Fotki::Album;
+use Yandex::Fotki::Photo;
 
 use Mojo::Base -base;
 use Mojo::UserAgent;
@@ -73,7 +74,8 @@ sub scan{
 	$io->as_dir->scan_tree(sub{
 			my $file = shift;
 
-			push @$res, $file->abs_path if -f $file->abs_path && $file->abs_path =~ $self->file_qr;
+			push @$res, Yandex::Fotki::Photo->new(local_path => $file->rel_path)
+												if -f $file->abs_path && $file->abs_path =~ $self->file_qr;
 			return 1 if -d $file->abs_path;
 	});
 	
@@ -175,7 +177,7 @@ ALBUM
 								 => $atom_album
 					);
 
-	return Yandex::Fotki::Album->new($tx->res->body);
+	return Yandex::Fotki::Album->new( xml => $tx->res->body );
 }
 
 sub delete_album{
@@ -209,7 +211,7 @@ sub load_albums{
 		
 		for my $entry( @$entries)
 		{
-			my $album = Yandex::Fotki::Album->new($entry->to_xml);
+			my $album = Yandex::Fotki::Album->new( xml => $entry->to_xml );
 			push @{$self->albums}, $album;
 			#say 'Album link: '.$album->link_self;
 		}
@@ -229,6 +231,8 @@ sub load_albums{
 	#build hierarhy
 	for my $cur_album (@{$self->albums})
 	{
+		next unless $cur_album->link_parent;
+		
 		my $parent = $self->albums->first(sub{ $_->link_self eq $cur_album->link_parent });
 		
 		warn 'No parent album with link ' . $cur_album->link_parent and next unless $parent;
