@@ -26,12 +26,21 @@ has auth_url => 'https://oauth.yandex.ru/authorize?response_type=token&client_id
 
 has base_user_url => sub { my $self = shift; return join('/', $self->base_url, 'api', 'users', $self->login); };
 
-has albums_url => sub{ 	my $self = shift; 
+has albums_url => sub{ 	
+            my $self = shift; 
 						$self->load_service_document unless $self->service_document;
 						my $dom = Mojo::DOM->new($self->service_document);
 						my $link = $dom->at('collection[id="album-list"]');
 						return $link->{href} if $link;
 						
+};
+
+has photos_url => sub{ 
+            my $self = shift; 
+						$self->load_service_document unless $self->service_document;
+						my $dom = Mojo::DOM->new($self->service_document);
+						my $link = $dom->at('collection[id="photo-list"]');
+						return $link->{href} if $link; 
 };
 
 has ua => sub { my $ua = Mojo::UserAgent->new;
@@ -41,7 +50,7 @@ has ua => sub { my $ua = Mojo::UserAgent->new;
 };
 
 has home_path => sub{ File::HomeDir->my_home };
-has config_path => sub{ catfile(shift->home_path, 'yf-sync.yml') };
+has config_path => sub{ catfile(shift->home_path, '.yf-sync.yml') };
 has work_path => '';
 
 has login => '';
@@ -54,7 +63,7 @@ has service_document => '';
 has albums => sub { Mojo::Collection->new; };
 
 sub start{
-    binmode(STDOUT, ':unix');    
+  binmode(STDOUT, ':unix');    
 	my $self = shift;
     $self->auth;
 }
@@ -74,7 +83,7 @@ sub scan{
 	$io->as_dir->scan_tree(sub{
 			my $file = shift;
 
-			push @$res, Yandex::Fotki::Photo->new(local_path => $file->rel_path)
+			push @$res, Yandex::Fotki::Photo->new(local_path => $file->rel_path, io => $file, sync => $self)
 												if -f $file->abs_path && $file->abs_path =~ $self->file_qr;
 			return 1 if -d $file->abs_path;
 	});

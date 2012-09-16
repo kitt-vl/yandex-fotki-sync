@@ -16,12 +16,13 @@ has link_self => '';
 has link_edit => '';
 
 has local_path => '';
+has io => undef;
+has sync => undef;
 
 sub new{
 	my ($class, %args) = @_;
-	#my $self = bless {}, ref $class || $class;
 	
-	my $self = $class->SUPER::new();
+	my $self = $class->SUPER::new(%args);
 	
 	$self->parse($args{xml}) if exists $args{xml};
 	
