@@ -43,8 +43,7 @@ sub parse{
 	my $link = $dom->at('link[rel="self"]');
 	$self->link_self($link->{href}) if $link;
 	
-	my $parent = $dom->at('link[rel="album"]');
-	$self->link_parent($parent->{href}) if $parent;
+
 }
 
 sub build_local_path{

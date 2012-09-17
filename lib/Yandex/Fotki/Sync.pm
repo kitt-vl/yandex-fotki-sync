@@ -45,6 +45,7 @@ has photos_url => sub{
 
 has ua => sub { my $ua = Mojo::UserAgent->new;
                 $ua->max_redirects(50);
+                #$ua->inactivity_timeout(100);
                 $ua->name('Yandex::Fotki::Sync/' . shift->version);
                 return $ua; 
 };

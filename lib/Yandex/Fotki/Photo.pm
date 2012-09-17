@@ -5,6 +5,7 @@ package Yandex::Fotki::Photo;
 
 use Mojo::Base 'Yandex::Fotki::Base';
 use Mojo::DOM;
+use Data::Dumper;
 
 has link_album => '';
 has access => 'public';
@@ -19,18 +20,16 @@ sub upload{
     my ($self, $album_id) = (shift, shift);
     my $ua = $self->sync->ua;
     
-    my $tx = $ua->post_form($self->sync->photos_url,
+    my $tx = $ua->post($self->sync->photos_url =>
+                            
                             {
-                                  image => { filename => $self->io->abs_path },
-                                  title => $self->io->name
-
-                                  
-                            },
-                            {
-                                'Authorization' => 'OAuth ' . $self->sync->token
-                            }
+                                'Authorization' => 'OAuth ' . $self->sync->token,
+                                'Content-Type' => 'image/'. lc($self->io->extension)
+                            } =>
+                            $self->io->as_file->contents
     );
     
+    say 'REQUEST TOKEN : ' . $self->sync->token;
     say 'UPLOAD RESPONSE: '. $tx->res->body;
     say 'UPLOAD ERROR: '. $tx->error if $tx->error;
     
