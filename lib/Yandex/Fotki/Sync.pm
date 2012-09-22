@@ -72,7 +72,7 @@ sub start{
   die 'Empty password!' unless $self->password;
   die 'Empty work path!' unless $self->work_path;
   
-  my $photos = $self->scan;
+  my $photos = $self->scan($self->work_path);
   say 'Work path "' . $self->work_path . '", items ' . $photos->size;
   
 }
