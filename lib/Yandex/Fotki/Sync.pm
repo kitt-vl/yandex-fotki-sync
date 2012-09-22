@@ -66,7 +66,15 @@ has albums => sub { Mojo::Collection->new; };
 sub start{
   binmode(STDOUT, ':unix');    
 	my $self = shift;
-    $self->auth;
+  #$self->auth;
+  $self->parse_options;
+  die 'Empty login!' unless $self->login;
+  die 'Empty password!' unless $self->password;
+  die 'Empty work path!' unless $self->work_path;
+  
+  my $photos = $self->scan;
+  say 'Work path "' . $self->work_path . '", items ' . $photos->size;
+  
 }
 
 =head 3
