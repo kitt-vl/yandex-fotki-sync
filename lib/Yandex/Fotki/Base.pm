@@ -24,14 +24,25 @@ sub new{
 	
 	my $self = $class->SUPER::new(%args);
 	
+  $self->load_info if $self->link_self && !$self->id;
+  
 	$self->parse($args{xml}) if exists $args{xml};
 	
 	return $self;
 }
 
+sub load_info{
+  my $self = shift;
+  
+  my $tx = $self->sync->ua->get($self->link_self => {'Authorization' => 'OAuth ' . $self->sync->token});
+  $self->parse($tx->res->body);
+  return $self;
+}
+
 sub parse{
 	my ($self, $xml) = (shift, shift);
-	
+	return unless $xml;
+  
 	utf8::decode($xml); 
 	
 	my $dom = Mojo::DOM->new($xml);

@@ -162,51 +162,6 @@ sub load_service_document{
     $self->service_document($tmp) if $tx->success;
 }
 
-sub upload_photo{
-    my ($self, $path, $album) = (shift, shift, shift);
-    die 'upload_photo not implemented yet!'
-    
-}
-
-sub create_album{
-	my ($self, $album) = (shift, shift);
-	die 'Empty login!' unless $self->login;
-	
-	my $ua = $self->ua;
-	my $post_url =  $self->base_user_url . '/albums/';
-	my $atom_album =<<"ALBUM"
-<entry xmlns="http://www.w3.org/2005/Atom" xmlns:f="yandex:fotki">
-  <title>$album</title>
-  <summary>$album</summary>
-</entry>
-ALBUM
-;
-	my $tx = $ua->post($post_url => { 	'Content-Type' => 'application/atom+xml; charset=utf-8; type=entry',
-										'Authorization' => 'OAuth ' . $self->token
-									}
-								 => $atom_album
-					);
-
-	return Yandex::Fotki::Album->new( xml => $tx->res->body );
-}
-
-sub delete_album{
-	my ($self, $album) = (shift, shift);
-	
-	my $ua = $self->ua;
-	my $tx = $ua->delete($album->link_self, {'Authorization' => 'OAuth ' . $self->token});
-	
-	if($tx->res->code == 204)
-	{
-		$self->albums->each(sub {
-		  my ($e, $count) = @_;
-		  splice @{$self->albums}, $count-1 if $e->id eq $album->id;
-		});	
-	}
-	
-	return $tx->res->code;
-}
-
 sub load_albums{
 	my $self = shift;
 	
@@ -221,7 +176,7 @@ sub load_albums{
 		
 		for my $entry( @$entries)
 		{
-			my $album = Yandex::Fotki::Album->new( xml => $entry->to_xml );
+			my $album = Yandex::Fotki::Album->new( xml => $entry->to_xml, sync => $self);
 			push @{$self->albums}, $album;
 			#say 'Album link: '.$album->link_self;
 		}
@@ -243,12 +198,7 @@ sub load_albums{
 	{
 		next unless $cur_album->link_parent;
 		
-		my $parent = $self->albums->first(sub{ $_->link_self eq $cur_album->link_parent });
-		
-		warn 'No parent album with link ' . $cur_album->link_parent and next unless $parent;
-		
-		$cur_album->parent($parent);
-		push @{$parent->childs}, $cur_album;
+    $cur_album->hierarhy;
 	}
 	
 	#build local path from parents

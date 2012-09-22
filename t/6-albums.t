@@ -23,8 +23,11 @@ ok length($sync->albums_url), 'App has url for all albums';
 
 my $test_name = 'test album ' . rand;
 
-my $album = $sync->create_album($test_name);
+my $album = Yandex::Fotki::Album->new( title => $test_name, sync => $sync);
+
 ok $album->isa('Yandex::Fotki::Album') , 'Create_album method return right class "Yandex::Fotki::Album"';
+
+$album->create;
 
 ok length($album->id), 'New album has id';
 ok length($album->link_self), 'New album has link';
@@ -32,8 +35,12 @@ ok length($album->link_self), 'New album has link';
 is $album->author, 'yfsync', 'New album has right author';
 is $album->title, $test_name, 'New album has right title';
 
-my $album2 = $sync->create_album('test album 2');
+my $album2 = Yandex::Fotki::Album->new( title => 'test album 2', sync => $sync);
+
 ok $album2->isa('Yandex::Fotki::Album') , 'Method return right class "Yandex::Fotki::Album"';
+
+$album2->create;
+
 ok length($album2->id), 'New album has id';
 
 $sync->load_albums;
@@ -41,14 +48,14 @@ $sync->load_albums;
 is scalar @{$sync->albums}, 6, 'Right number of albums';
 
 
-ok $sync->albums->grep(sub { $_->title eq 'Неразобраннное' } ), 'Right album title in collection';
+ok $sync->albums->grep(sub { $_->title eq 'Неразобранное' } ), 'Right album title in collection';
 ok $sync->albums->grep(sub{ $_->title eq 'test album 2' }), 'Right album title in collection';
 ok $sync->albums->grep(sub{ $_->title eq $test_name }), 'Right album title in collection';
 
-my $del_code = $sync->delete_album($album);
+my $del_code = $album->delete;
 is $del_code, 204, 'Right delete code';
 
-my $del_code2 = $sync->delete_album($album2);
+my $del_code2 = $album2->delete;
 is $del_code2, 204, 'Right delete code';
 
 $sync->load_albums;
@@ -56,8 +63,8 @@ is scalar @{$sync->albums}, 4, 'Right number of albums after delete';
 
 #$sync->hierarhy_albums;
 
-my $first = $sync->find_album_by_path('Неразобраннное');
-is $first->title, 'Неразобраннное', 'Right 1st level hierarhy album title';
+my $first = $sync->find_album_by_path('Неразобранное');
+is $first->title, 'Неразобранное', 'Right 1st level hierarhy album title';
 
 is $first->childs->size, 1, 'Right 1st level hierarhy album childs collection';
 is $first->childs->first->title, 'level 2', 'Right 2nd level hierarhy album title';

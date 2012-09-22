@@ -26,6 +26,6 @@ $sync->load_albums;
 
 is scalar @{$sync->albums}, 4, 'Right number of albums';
 
-my $find_album = $sync->find_album_by_path('Неразобраннное\\level 2\\level 3-1');
+my $find_album = $sync->find_album_by_path('Неразобранное\\level 2\\level 3-1');
 
 is $find_album->id, 'urn:yandex:fotki:yfsync:album:255984', 'Album with id "urn:yandex:fotki:yfsync:album:255984" finded';

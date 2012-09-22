@@ -15,23 +15,45 @@ has disable_comments => 'false';
 
 has link_original => '';
 
+sub parse{
+  my ($self, $xml) = (shift, shift);  
+  return unless $xml;
+      
+  $self->SUPER::parse($xml);
+  	
+  my $dom = Mojo::DOM->new($xml);
+      
+  my $parent = $dom->at('link[rel="album"]');
+	if($parent)
+  {
+      $self->link_album($parent->{href}) ;
+      my $album = $self->sync->albums->first(sub{  $_->link_self eq $self->link_album});
+      unless($album && $album->id)
+      {
+          $album = Yandex::Fotki::Album->new(link_self => $self->link_album, sync => $self->sync);
+          $album->load_info;
+      }
+  }
+}
 
 sub upload{
     my ($self, $album_id) = (shift, shift);
     my $ua = $self->sync->ua;
-    
-    my $tx = $ua->post($self->sync->photos_url =>
-                            
+
+    #say 'URL:' . $self->sync->photos_url;
+    #say 'PATH:' . $self->io->abs_path;
+    #say 'TOKEN:' . $self->sync->token;
+    my $tx = $ua->post_form($self->sync->photos_url =>
+                            {
+                                image => { file => '' . $self->io->abs_path }
+                            } =>
                             {
                                 'Authorization' => 'OAuth ' . $self->sync->token,
-                                'Content-Type' => 'image/'. lc($self->io->extension)
-                            } =>
-                            $self->io->as_file->contents
+                                'Content-Type' => 'multipart/form-data' 
+                            }
     );
     
-    say 'REQUEST TOKEN : ' . $self->sync->token;
-    say 'UPLOAD RESPONSE: '. $tx->res->body;
-    say 'UPLOAD ERROR: '. $tx->error if $tx->error;
+    warn "Upload photo error: " . $tx->error . "\nBody: " . $tx->res->body and return if $tx->error;
     
     return unless $tx->res->code == 201;
     
@@ -39,4 +61,14 @@ sub upload{
     return $self;
 }
 
+sub delete{
+	my $self = shift;
+	
+	my $ua = $self->sync->ua;
+	my $tx = $ua->delete($self->link_self, {'Authorization' => 'OAuth ' . $self->sync->token});
+  
+  $self->link_self('') if $tx->res->code == 204;
+  
+	return $tx->res->code;  
+}
 1;
