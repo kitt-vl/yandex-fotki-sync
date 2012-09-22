@@ -19,7 +19,7 @@ use Data::Dumper;
 #my $auth_id = 'f6612965aba347c986dc52361b655f08';
 has version => '1.0';
 
-has file_qr => sub{ qr/\.(jpg|png|bmp|gif)$/i };
+has file_qr => sub{ qr/\.(jpe?g|png|bmp|gif)$/i };
 
 has base_url => 'api-fotki.yandex.ru';
 has auth_url => 'https://oauth.yandex.ru/authorize?response_type=token&client_id=5e0c4dfec7104aba81a35bd7678a993b&redirect_uri=https://oauth.yandex.ru/verification_code';
