@@ -3,7 +3,7 @@ use warnings;
 use feature qw/say/;
 use utf8;
 use Data::Dumper;
-
+use Cwd;
 use Test::More tests => 36;
 use lib 'lib';
 
@@ -15,7 +15,7 @@ my $sync = Yandex::Fotki::Sync->new;
 
 $sync->login('yfsync');
 $sync->password('yfsyncTESTaccaunt');
-
+$sync->work_path(Cwd::cwd);
 $sync->auth;
 
 ok length($sync->token), 'Authorize and get token';
@@ -28,7 +28,7 @@ my $photos = $sync->scan;
 
 while(my $photo = shift @{$photos})
 {
-  $photo->upload();
+  $photo->upload('urn:yandex:fotki:yfsync:album:255984');
   
   ok $photo->link_self, 'Uploaded file has link_self';
   like $photo->link_self, qr/https?\:\/\/.*yfsync.*photo.*/, 'Link_self look like right URL';

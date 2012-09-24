@@ -12,7 +12,6 @@ has link_ymapsml => '';
 has link_alternate => '';
 has protected => '';
 has image_count => '';
-has link_parent => '';
 
 has parent => undef;
 has childs => sub { Mojo::Collection->new };
@@ -26,7 +25,10 @@ sub parse{
   my $dom = Mojo::DOM->new($xml);
       
   my $parent = $dom->at('link[rel="album"]');
-	$self->link_parent($parent->{href}) if $parent;
+	$self->link_album($parent->{href}) if $parent;
+  
+  push @{$self->sync->albums}, $self unless $self->sync->albums->first(sub{ $_->link_self eq $self->link_self });
+  
 }
 
 sub delete{
@@ -52,15 +54,29 @@ sub create{
 	my $self = shift;
 	die 'Empty login!' unless $self->sync->login;
 	
+  my $album;
+  
+  if(my $parent_path = $self->parent_path)
+  {
+    $album = $self->sync->albums->first(sub{ $_->local_path eq $parent_path }) 
+                      // Yandex::Fotki::Album->new(sync => $self->sync, local_path => $parent_path);
+                      
+    $album->create unless $album->link_self;
+   
+  } 
+  
 	my $ua = $self->sync->ua;
-
+  #say 'ALBUM CREATE: localpath ' . $self->local_path;
 	my $atom_album =<<"ALBUM"
 <entry xmlns="http://www.w3.org/2005/Atom" xmlns:f="yandex:fotki">
   <title>@{[ $self->title ]}</title>
   <summary>@{[ $self->title ]}</summary>
-</entry>
 ALBUM
 ;
+
+  $atom_album .= "\n<link href='" . $album->link_self . "' rel='album' />\n"  if $album && $album->link_self;
+  $atom_album .= '</entry>';
+  
 	my $tx = $ua->post( $self->sync->albums_url => 
                   { 
                     'Content-Type' => 'application/atom+xml; charset=utf-8; type=entry',
@@ -74,10 +90,12 @@ ALBUM
 
 sub hierarhy{
     my $self = shift;
+    
+    return unless $self->link_album;
     		
-    my $parent = $self->sync->albums->first(sub{ $_->link_self eq $self->link_parent });
+    my $parent = $self->sync->albums->first(sub{ $_->link_self eq $self->link_album });
 		
-		warn 'No parent album with link ' . $self->link_parent and next unless $parent;
+		warn 'No parent album with link ' . $self->link_album and next unless $parent;
 		
 		$self->parent($parent);
 		push @{$parent->childs}, $self;

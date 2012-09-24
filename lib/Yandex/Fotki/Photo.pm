@@ -7,7 +7,6 @@ use Mojo::Base 'Yandex::Fotki::Base';
 use Mojo::DOM;
 use Data::Dumper;
 
-has link_album => '';
 has access => 'public';
 has xxx => 'false';
 has hide_original => 'false';
@@ -37,23 +36,31 @@ sub parse{
 }
 
 sub upload{
-    my ($self, $album_id) = (shift, shift);
+    my ($self) = (shift, shift);
+
+    my $album = $self->sync->albums->first(sub{ $_->local_path eq $self->parent_path }) 
+                    // Yandex::Fotki::Album->new(sync => $self->sync, local_path => $self->parent_path);
+                    
+    $album->create unless $album->link_self;
+        
     my $ua = $self->sync->ua;
 
     #say 'URL:' . $self->sync->photos_url;
     #say 'PATH:' . $self->io->abs_path;
     #say 'TOKEN:' . $self->sync->token;
-    my $tx = $ua->post_form($self->sync->photos_url =>
-                            {
-                                image => { file => '' . $self->io->abs_path }
-                            } =>
+    my $params = { image => { file => '' . $self->io->abs_path } };
+    
+    $params->{album} = $album->id if $album->id;
+    
+    my $tx = $ua->post_form($self->sync->photos_url =>                            
+                            $params  =>
                             {
                                 'Authorization' => 'OAuth ' . $self->sync->token,
                                 'Content-Type' => 'multipart/form-data' 
                             }
     );
     
-    warn "Upload photo error: " . $tx->error . "\nBody: " . $tx->res->body and return if $tx->error;
+    warn "Upload photo error: " . $tx->error . "\nBody: " . $tx->res->body and return $tx->res->code if $tx->error;
     
     return unless $tx->res->code == 201;
     
@@ -66,9 +73,11 @@ sub delete{
 	
 	my $ua = $self->sync->ua;
 	my $tx = $ua->delete($self->link_self, {'Authorization' => 'OAuth ' . $self->sync->token});
-  
-  $self->link_self('') if $tx->res->code == 204;
+    
+    $self->link_self('') if $tx->res->code == 204;
   
 	return $tx->res->code;  
 }
+
+
 1;

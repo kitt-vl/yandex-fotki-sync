@@ -66,13 +66,26 @@ has albums => sub { Mojo::Collection->new; };
 sub start{
   binmode(STDOUT, ':unix');    
 	my $self = shift;
-  #$self->auth;
+  
   $self->parse_options;
   die 'Empty login!' unless $self->login;
   die 'Empty password!' unless $self->password;
   die 'Empty work path!' unless $self->work_path;
   
+  #say 'LOGIN: "' . $self->login . '"';
+  #say 'PASSWORD: "' . $self->password . '"';
+  #say 'DIR: "' . $self->work_path . '"';
+  
+  $self->auth;
+  
+  $self->load_albums;
+  
   my $photos = $self->scan($self->work_path);
+  for my $photo (@{$photos})
+  {
+      $photo->upload;
+  }
+  
   say 'Work path "' . $self->work_path . '", items ' . $photos->size;
   
 }
@@ -126,7 +139,7 @@ sub auth{
     my $tx = $ua->get( $self->auth_url);
     
     my $node = $tx->res->dom->at('form.b-authorize-form');
-    die "Cant find AUTHORIZE FORM!" unless $node;
+    die "Cant find AUTHORIZE FORM!\nBody:\n" . $tx->res->body unless $node;
     
     my $auth2_url = $node->{action};
     
@@ -154,6 +167,8 @@ sub parse_options{
                                 'dir=s' => \$dir);
     $self->login($login);
     $self->password($password);
+    die "Dir arg should be absolute!" unless File::Spec->file_name_is_absolute($dir);
+    die "Dir arg not exists or not readable!" unless -d $dir && -r $dir;
     $self->work_path($dir);
 }
 
@@ -204,7 +219,7 @@ sub load_albums{
 	#build hierarhy
 	for my $cur_album (@{$self->albums})
 	{
-		next unless $cur_album->link_parent;
+		next unless $cur_album->link_album;
 		
     $cur_album->hierarhy;
 	}

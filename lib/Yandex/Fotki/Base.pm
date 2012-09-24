@@ -14,6 +14,7 @@ has updated => '';
 has published => '';
 has link_self => '';
 has link_edit => '';
+has link_album => '';
 
 has local_path => '';
 has io => undef;
@@ -47,12 +48,17 @@ sub parse{
 	
 	my $dom = Mojo::DOM->new($xml);
 	
-	$self->id($dom->entry->id->text);
-	$self->author($dom->entry->author->name->text);
-	$self->title($dom->entry->title->text);
+  if(my $entry = $dom->at('entry'))
+  {
+    $self->id($entry->id->text);
+    $self->author($entry->author->name->text);
+    $self->title($entry->title->text);
+    
+    my $link = $dom->at('link[rel="self"]');
+    $self->link_self($link->{href}) if $link;
+  }
+  
 	
-	my $link = $dom->at('link[rel="self"]');
-	$self->link_self($link->{href}) if $link;
 	
 
 }
@@ -69,6 +75,33 @@ sub build_local_path{
 	
 	$self->local_path($path);
 	
+}
+
+sub parent_path{
+    my $self = shift;
+    
+    my $path = '';
+    if($self->io)
+    {    
+      $path = File::Spec->abs2rel( $self->io->abs_path->path, $self->sync->work_path);
+
+    }elsif($self->local_path)
+    {
+      $path = $self->local_path;
+    }
+
+    
+    my @dir = File::Spec->splitdir($path);
+    @dir = grep { $_ } @dir;
+    
+    $self->title($dir[-1]);
+    
+    pop @dir;
+
+    my $parent_path = join '/', @dir;
+    say 'PARENT_PATH : ' . $parent_path;
+
+    return $parent_path;  
 }
 
 1;

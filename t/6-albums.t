@@ -3,7 +3,7 @@ use warnings;
 use utf8;
 use Data::Dumper;
 
-use Test::More tests => 23;
+use Test::More tests => 26;
 use lib 'lib';
 
 binmode(STDOUT,':unix');
@@ -58,6 +58,19 @@ is $del_code, 204, 'Right delete code';
 my $del_code2 = $album2->delete;
 is $del_code2, 204, 'Right delete code';
 
+my $album3 = Yandex::Fotki::Album->new(title => 'test album with parent', sync => $sync);
+$album3->parent( Yandex::Fotki::Album->new(link_self => 'http://api-fotki.yandex.ru/api/users/yfsync/album/255407/', sync => $sync));
+$album3->create;
+
+ok length($album3->id), 'New album has id';
+
+
+is $album3->link_album, 'http://api-fotki.yandex.ru/api/users/yfsync/album/255407/', 'Right album parent';
+
+my $del_code3 = $album3->delete;
+is $del_code3, 204, 'Right delete code';
+
+#######################################
 $sync->load_albums;
 is scalar @{$sync->albums}, 4, 'Right number of albums after delete';
 
@@ -70,7 +83,7 @@ is $first->childs->size, 1, 'Right 1st level hierarhy album childs collection';
 is $first->childs->first->title, 'level 2', 'Right 2nd level hierarhy album title';
 is $first->childs->first->childs->size, 2, 'Right 2st level hierarhy album childs collection';
 
-is $first->childs->first->childs->[0]->title, 'уровень 3-2', 'Right 3rd level hierarhy album title';
-is $first->childs->first->childs->[1]->title, 'level 3-1', 'Right 3rd level hierarhy album title';
+ok $first->childs->first->childs->first(sub{ $_->title eq 'уровень 3-2'}), 'Right 3rd level hierarhy album title';
+ok $first->childs->first->childs->first(sub{ $_->title eq 'level 3-1'}), 'Right 3rd level hierarhy album title';
 
 #print Dumper($sync->albums);
