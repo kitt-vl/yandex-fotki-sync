@@ -37,6 +37,7 @@ sub load_info{
   
   my $tx = $self->sync->ua->get($self->link_self => {'Authorization' => 'OAuth ' . $self->sync->token});
   $self->parse($tx->res->body);
+  
   return $self;
 }
 
@@ -57,16 +58,13 @@ sub parse{
     my $link = $dom->at('link[rel="self"]');
     $self->link_self($link->{href}) if $link;
   }
-  
-	
-	
-
 }
 
 sub build_local_path{
 	my $self = shift;
 	my $path = $self->title;
 	my $parent = $self->parent;
+  
 	while($parent)
 	{
 		$path = $parent->title . '\\' . $path  ;
@@ -85,11 +83,11 @@ sub parent_path{
     {    
       $path = File::Spec->abs2rel( $self->io->abs_path->path, $self->sync->work_path);
 
-    }elsif($self->local_path)
+    }
+    elsif($self->local_path)
     {
       $path = $self->local_path;
     }
-
     
     my @dir = File::Spec->splitdir($path);
     @dir = grep { $_ } @dir;
@@ -99,7 +97,7 @@ sub parent_path{
     pop @dir;
 
     my $parent_path = join '/', @dir;
-    say 'PARENT_PATH : ' . $parent_path;
+    #say 'PARENT_PATH : ' . $parent_path;
 
     return $parent_path;  
 }
