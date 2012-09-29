@@ -5,7 +5,7 @@ use utf8;
 use Test::More tests => 3;
 use lib 'lib';
 
-binmode(STDOUT,':unix');
+binmode( STDOUT, ':unix' );
 
 use_ok 'Yandex::Fotki::Sync';
 
@@ -16,12 +16,11 @@ $sync->password('yfsyncTESTaccaunt');
 
 $sync->auth;
 
-ok length($sync->token), 'Authorize and get token';
-
+ok length( $sync->token ), 'Authorize and get token';
 
 $sync->login('yfsync');
 $sync->password('wrong pass');
 
 $sync->auth;
 
-ok length($sync->token) == 0, 'Do not authorize with wrong password';
+ok length( $sync->token ) == 0, 'Do not authorize with wrong password';
