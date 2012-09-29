@@ -69,21 +69,23 @@ has options => sub { \@ARGV };
 
 has service_document => '';
 has albums => sub { Mojo::Collection->new; };
-
+has default_access => 'private';
 sub start {
     binmode( STDOUT, ':unix' );
     my $self = shift;
 
     $self->parse_options;
+    
     die 'Empty login!'     unless $self->login;
-    die 'Empty password!'  unless $self->password;
     die 'Empty work path!' unless $self->work_path;
-
-    #say 'LOGIN: "' . $self->login . '"';
-    #say 'PASSWORD: "' . $self->password . '"';
-    #say 'DIR: "' . $self->work_path . '"';
-
-    $self->auth;
+    
+    $self->load_config;
+    die 'Empty password!' unless $self->token && $self->password;
+          
+    $self->auth unless $self->token;
+    die "Auth failed for " . $self->login unless $self->token;
+    
+    $self->save_config;
 
     $self->load_albums;
 
@@ -168,17 +170,19 @@ sub auth {
     my ($_token) = ( $tx->req->url->fragment // '' ) =~ /access_token\=(.*?)\&/;
 
     $self->token( $_token // '' );
+    
 }
 
 sub parse_options {
     my $self = shift;
     my $opt  = $self->options;
-    my ( $login, $password, $dir );
+    my ( $login, $password, $dir, $access );
     my $ret = GetOptionsFromArray(
         $opt,
         'login=s'    => \$login,
         'password=s' => \$password,
-        'dir=s'      => \$dir
+        'dir=s'      => \$dir,
+        'access=s'     => \$access
     );
     $self->login($login);
     $self->password($password);
@@ -186,6 +190,18 @@ sub parse_options {
       unless File::Spec->file_name_is_absolute($dir);
     die "Dir arg not exists or not readable!" unless -d $dir && -r $dir;
     $self->work_path($dir);
+    
+    if($access)
+    {
+        if($access =~ /private|public|friends/)
+        {
+            $self->default_access($access);
+        }
+        else
+        {
+            die "Unknown 'access' arg! Use 'private|public|friends'";
+        }
+    }
 }
 
 sub load_service_document {
@@ -210,6 +226,9 @@ sub load_albums {
 
     while ($tmp_url) {
         my $tx      = $ua->get($tmp_url);
+        
+        #say 'LOAD ALBUMS: ' . $tx->res->body;
+        
         my $entries = $tx->res->dom->find('entry');
 
         for my $entry (@$entries) {

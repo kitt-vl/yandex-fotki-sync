@@ -72,7 +72,7 @@ sub build_local_path {
     }
 
     utf8::encode($path);
-    say 'ALBUM LOCALPATH: ' . $path;
+    #say 'ALBUM LOCALPATH: ' . $path;
     $self->local_path($path);
 
 }

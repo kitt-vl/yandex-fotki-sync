@@ -41,19 +41,23 @@ sub parse {
 }
 
 sub upload {
-    my ($self) = ( shift, shift );
+    my ($self) = ( shift);
 
-    $self->sync->load_albums;
+    #$self->sync->load_albums;
     
-    my $album =
-      $self->sync->albums->first( sub { $_->local_path eq $self->parent_path } )
-      // Yandex::Fotki::Album->new(
-        sync       => $self->sync,
-        local_path => $self->parent_path
-      );
-
-    $album->create unless $album->link_self;
-
+    my $album ;
+    if($self->parent_path)
+    {
+        $album =
+          $self->sync->albums->first( sub { $_->local_path eq $self->parent_path } )
+          // Yandex::Fotki::Album->new(
+            sync       => $self->sync,
+            local_path => $self->parent_path
+          );
+          
+              $album->create unless $album->link_self;
+           }
+    
     my $ua = $self->sync->ua;
 
     #say 'URL:' . $self->sync->photos_url;
@@ -61,15 +65,15 @@ sub upload {
     #say 'TOKEN:' . $self->sync->token;
     my $params = { image => { file => '' . $self->io->abs_path } };
 
-    $params->{album} = $album->id if $album->id;
+    $params->{album} = $album->id if $album && $album->id;
+    $params->{'access'} = $self->sync->default_access;
 
-
-    say '=====================================================================';
-    say 'Uploading photo :';
-    say '   abs_path: ' . $self->io->abs_path;
-    say '   title: ' . $self->title;
-    say '   local_path: ' . $self->local_path;
-    say '   link_album: ' . $self->link_album;
+    #say '=====================================================================';
+    #say 'Uploading photo :';
+    #say '   abs_path: ' . $self->io->abs_path;
+    #say '   title: ' . $self->title;
+    #say '   local_path: ' . $self->local_path;
+    #say '   link_album: ' . $album->link_self ;
     
     
     my $tx = $ua->post_form(
@@ -79,15 +83,16 @@ sub upload {
         }
     );
 
-    say '   result: ' . $tx->res->code;
-    say '   link_self: ' . $self->link_self;
+    #say '   result: ' . $tx->res->code;
+    #say '   link_self: ' . $self->link_self;
     
-    warn "Upload photo error: " . $tx->error . "\nBody: " . $tx->res->body
+    warn "Upload photo '" . $self->io->abs_path . "' error: " . $tx->error . "\nBody: " . $tx->res->body
       and return $tx->res->code
       if $tx->error;
 
     return unless $tx->res->code == 201;
-
+    
+    say 'Photo "' . $self->io->abs_path . '" uploaded.';
     $self->parse( $tx->res->body );
     return $self;
 }

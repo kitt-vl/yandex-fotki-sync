@@ -27,7 +27,7 @@ $sync->load_albums;
 my $photos = $sync->scan;
 
 while ( my $photo = shift @{$photos} ) {
-    $photo->upload('urn:yandex:fotki:yfsync:album:255984');
+    $photo->upload;
 
     ok $photo->link_self,   'Uploaded file has link_self';
     like $photo->link_self, qr/https?\:\/\/.*yfsync.*photo.*/,

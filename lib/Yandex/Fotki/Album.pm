@@ -93,11 +93,11 @@ ALBUM
       
     $atom_album .= '</entry>';
 
-    say '=====================================================================';
-    say 'Creating album :';
-    say '   title: ' . $self->title;
-    say '   local_path: ' . $self->local_path;
-    say '   link_album: ' . ($album && $album->link_self?$album->link_self : '');
+    #say '=====================================================================';
+    #say 'Creating album :';
+    #say '   title: ' . $self->title;
+    #say '   local_path: ' . $self->local_path;
+    #say '   link_album: ' . ($album && $album->link_self?$album->link_self : '');
     
     my $tx = $ua->post(
         $self->sync->albums_url => {
@@ -105,10 +105,15 @@ ALBUM
             'Authorization' => 'OAuth ' . $self->sync->token
         } => $atom_album
     );
+    
+    warn "Album create error: " . $tx->error . "\nBody: " . $tx->res->body
+      and return $tx->res->code
+      if $tx->error;
+      
     $self->parse( $tx->res->body );
     
-    say '   result: ' . $tx->res->code;
-    say '   link_self: ' . $self->link_self;
+    #say '   result: ' . $tx->res->code;
+    #say '   link_self: ' . $self->link_self;
     return $self;
 }
 
