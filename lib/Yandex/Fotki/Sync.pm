@@ -80,7 +80,7 @@ sub start {
     die 'Empty work path!' unless $self->work_path;
     
     $self->load_config;
-    die 'Empty password!' unless $self->token && $self->password;
+    die 'Empty password!' unless $self->token || $self->password;
           
     $self->auth unless $self->token;
     die "Auth failed for " . $self->login unless $self->token;
