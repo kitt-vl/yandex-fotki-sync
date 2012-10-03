@@ -3,7 +3,7 @@ use warnings;
 use utf8;
 use Data::Dumper;
 
-use Test::More tests => 20;
+use Test::More tests => 22;
 use lib 'lib';
 
 binmode( STDOUT, ':unix' );
@@ -46,6 +46,7 @@ $album2->create;
 
 
 ok length( $album2->id ), 'New album has id';
+ok length( $album2->link_photos ), 'New album has link to photo collection';
 
 $sync->load_albums;
 if(my $test = $sync->albums->first(sub{ $_->local_path eq 't'}))
@@ -55,11 +56,11 @@ if(my $test = $sync->albums->first(sub{ $_->local_path eq 't'}))
 
 is scalar @{ $sync->albums }, 6, 'Right number of albums';
 
-ok $sync->albums->grep( sub { $_->title eq 'Неразобранное' } ),
+ok $sync->albums->first( sub { $_->title eq 'Неразобранное' } ),
   'Right album title in collection';
-ok $sync->albums->grep( sub { $_->title eq 'test album 2' } ),
+ok $sync->albums->first( sub { $_->title eq 'test album 2' } ),
   'Right album title in collection';
-ok $sync->albums->grep( sub { $_->title eq $test_name } ),
+ok $sync->albums->first( sub { $_->title eq $test_name } ),
   'Right album title in collection';
 
 my $del_code = $album->delete;
@@ -78,6 +79,7 @@ my $album3 =
 $album3->create;
 
 ok length( $album3->id ), 'New album has id';
+ok length( $album3->link_photos ), 'New album has link to photo collection';
 
 is $album3->link_album,
   'http://api-fotki.yandex.ru/api/users/yfsync/album/255407/',

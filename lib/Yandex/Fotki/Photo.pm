@@ -7,7 +7,7 @@ use Mojo::Base 'Yandex::Fotki::Base';
 use Mojo::DOM;
 use Data::Dumper;
 
-has access           => 'public';
+has access           => 'private';
 has xxx              => 'false';
 has hide_original    => 'false';
 has disable_comments => 'false';
@@ -37,6 +37,10 @@ sub parse {
             );
             $album->load_info;
         }
+        
+        $self->build_local_path;
+        
+        push @{$album->photos}, $self unless $album->photos->first(sub{ $_->link_self eq $self->link_self });
     }
 }
 
@@ -86,7 +90,7 @@ sub upload {
     #say '   result: ' . $tx->res->code;
     #say '   link_self: ' . $self->link_self;
     
-    warn "Upload photo '" . $self->io->abs_path . "' error: " . $tx->error . "\nBody: " . $tx->res->body
+    warn "Error upload photo '" . $self->io->abs_path . "': " . $tx->error . "\nBody: " . $tx->res->body
       and return $tx->res->code
       if $tx->error;
 
@@ -105,15 +109,26 @@ sub delete {
       $ua->delete( $self->link_self,
         { 'Authorization' => 'OAuth ' . $self->sync->token } );
 
-    $self->link_self('') if $tx->res->code == 204;
+    if ($tx->res->code == 204)
+    {
+
+        if($self->link_self && $self->link_album)
+        {
+            if(my $album = $self->sync->albums->first(sub{ $_->link_self eq $self->link_album }))
+            {
+                $album->photos->each(sub{
+                    my ($photo, $cnt) = @_;
+                    if($photo->link_self eq $self->link_self)
+                    {
+                        splice @{$album->photos}, $cnt-1;
+                    }
+                });
+            }
+        }
+        $self->link_self('');
+    }
 
     return $tx->res->code;
 }
 
-
-sub parent_path{
-    my $self = shift;
-    my $parent_path = $self->SUPER::parent_path;
-    
-}
 1;

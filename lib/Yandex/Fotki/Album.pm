@@ -13,17 +13,21 @@ has link_alternate => '';
 has protected      => '';
 has image_count    => '';
 
+has photos => sub{ Mojo::Collection->new };
+
 sub parse {
     my ( $self, $xml ) = ( shift, shift );
     return unless $xml;
 
-    $self->SUPER::parse($xml);
-
-    my $dom = Mojo::DOM->new($xml);
-
-    my $parent = $dom->at('link[rel="album"]');
-    $self->link_album( $parent->{href} ) if $parent;
-
+    if(my $dom = $self->SUPER::parse($xml))
+    {
+        my $parent = $dom->at('link[rel="album"]');
+        $self->link_album( $parent->{href} ) if $parent;
+        
+        my $photos = $dom->at('link[rel="photos"]');
+        $self->link_photos( $photos->{href} ) if $photos;
+    }
+    
     push @{ $self->sync->albums }, $self
       unless $self->link_self && $self->sync->albums->first(
         sub { $_->link_self eq $self->link_self } );
@@ -115,6 +119,42 @@ ALBUM
     #say '   result: ' . $tx->res->code;
     #say '   link_self: ' . $self->link_self;
     return $self;
+}
+
+sub load_photos{
+    my $self = shift;
+    
+    warn 'Album "' . $self->local_path . '": load_photos while empty link_photos!' and return unless $self->link_photos;
+    
+    $self->photos(Mojo::Collection->new);
+    my $tmp_url = $self->link_photos;
+    
+    while($tmp_url)
+    { 
+        my $tx = $self->sync->ua->get($tmp_url => { 'Authorization' => 'OAuth ' . $self->sync->token });
+        warn "Album load photos error: " . $tx->error . "\nBody: " . $tx->res->body
+          and return $tx->res->code
+          if $tx->error;
+          
+        my $entries = $tx->res->dom->find('entry');
+        for my $entry (@{$entries})
+        {
+            my $photo = Yandex::Fotki::Photo->new(sync => $self->sync, xml => $entry->to_xml);
+            push @{$self->photos}, $photo;           
+
+        }
+        
+        if(my $next = $tx->res->dom->at('link[rel="next"]'))
+        {
+            $tmp_url = $next->{href};
+        }
+        else
+        {
+            $tmp_url = '';
+            last;
+        }
+      
+    }
 }
 
 1;

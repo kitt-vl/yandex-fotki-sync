@@ -59,16 +59,18 @@ sub parse {
         my $link = $dom->at('link[rel="self"]');
         $self->link_self( $link->{href} ) if $link;
     }
+    
+    return $dom;
 }
 
 sub build_local_path {
     my $self   = shift;
     my $path   = $self->title;
-    my $parent = $self->sync->albums->first(sub{ $_->link_self eq $self->link_album });
+    my $parent = $self->sync->albums->{$self->parent_path};
 
     while ($parent) {
         $path   = $parent->title . '/' . $path;
-        $parent = $self->sync->albums->first(sub{ $_->link_self eq $parent->link_album });
+        $parent = $self->sync->albums{ $parent->parent_path };
     }
 
     utf8::encode($path);

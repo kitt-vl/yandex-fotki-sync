@@ -14,7 +14,6 @@ use File::Spec::Functions;
 use File::HomeDir;
 use YAML::Tiny;
 use Getopt::Long qw(GetOptionsFromArray);
-use Encode;
 use Data::Dumper;
 
 #my $auth_id = 'f6612965aba347c986dc52361b655f08';
@@ -68,8 +67,9 @@ has token    => '';
 has options => sub { \@ARGV };
 
 has service_document => '';
-has albums => sub { Mojo::Collection->new; };
+has albums => sub { return {} };
 has default_access => 'private';
+
 sub start {
     binmode( STDOUT, ':unix' );
     my $self = shift;
@@ -222,33 +222,29 @@ sub load_albums {
 
     my $ua      = $self->ua;
     my $tmp_url = $self->albums_url;
-    $self->albums( Mojo::Collection->new );
-
+    $self->albums( {} );
+    
+    my @tmp_albums;
     while ($tmp_url) {
-        my $tx      = $ua->get($tmp_url);
-        
-        #say 'LOAD ALBUMS: ' . $tx->res->body;
-        
+        my $tx      = $ua->get($tmp_url);        
+       
         my $entries = $tx->res->dom->find('entry');
 
         for my $entry (@$entries) {
-            my $album =
-              Yandex::Fotki::Album->new( xml => $entry->to_xml, sync => $self );
+            push @tmp_albums,  Yandex::Fotki::Album->new( xml => $entry->to_xml, sync => $self );  
         }
 
-        my $next_page = $tx->res->dom->at('link[rel="next"]');
-
-        if ($next_page) {
+        if (my $next_page = $tx->res->dom->at('link[rel="next"]')) {
             $tmp_url = $next_page->{href};
         }
         else {
             $tmp_url = '';
         }
     }
-
     #build local path from parents
-    for my $cur_album ( @{ $self->albums } ) {
+    for my $cur_album ( @tmp_albums ) {
         $cur_album->build_local_path;
+        $self->albums->{$cur_album->local_path} = $cur_album;
     }
 
 }
@@ -258,7 +254,7 @@ sub find_album_by_path {
 
     $path = join '/', File::Spec->splitdir($path);
 
-    return $self->albums->first( sub { $_->local_path eq $path } );
+    return $self->albums->{$path };
 
 }
 1;
