@@ -40,28 +40,11 @@ sub delete {
     {'Authorization' => 'OAuth ' . $self->sync->token});
 
   if ($tx->res->code == 204) {
-    $self->delete_from_cache;
+    delete $self->sync->albums_by_path->{$self->local_path};
+    delete $self->sync->albums_by_link->{$self->link_self};
   }
 
   return $tx->res->code;
-}
-
-sub delete_from_cache {
-  my $self = shift;
-
-  $self->link_self('');
-
-  $self->sync->albums->each(
-    sub {
-      my ($elem, $count) = @_;
-      splice @{$self->sync->albums}, $count - 1
-        if $elem->id eq $self->id;
-
-      $elem->delete_from_cache
-        if $elem->link_album && $elem->link_album eq $self->link_self;
-    }
-  );
-
 }
 
 sub create {

@@ -48,7 +48,7 @@ sub upload {
   my $album;
   if ($self->parent_path) {
     $album =
-      $self->sync->albums->first(sub { $_->local_path eq $self->parent_path })
+      $self->sync->albums_by_path->{$self->parent_path || 'NOT_EXISTS_PATH'}
       // Yandex::Fotki::Album->new(
       sync       => $self->sync,
       local_path => $self->parent_path
@@ -110,22 +110,9 @@ sub delete {
 
   if ($tx->res->code == 204) {
 
-    if ($self->link_self && $self->link_album) {
-      if (
-        my $album = $self->sync->albums->first(
-          sub { $_->link_self eq $self->link_album }
-        )
-        )
-      {
-        $album->photos->each(
-          sub {
-            my ($photo, $cnt) = @_;
-            if ($photo->link_self eq $self->link_self) {
-              splice @{$album->photos}, $cnt - 1;
-            }
-          }
-        );
-      }
+    if(my $parent = $self->sync->albums_by_link->{$self->link_album})
+    {
+        delete $parent->photos->{$self->local_path};
     }
     $self->link_self('');
   }
