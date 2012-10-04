@@ -13,7 +13,7 @@ has link_alternate => '';
 has protected      => '';
 has image_count    => '';
 
-has photos => sub { return {} };
+has photos => sub { Mojo::Collection->new };
 
 sub parse {
   my ($self, $xml) = (shift, shift);
@@ -27,7 +27,7 @@ sub parse {
     $self->link_photos($photos->{href}) if $photos;
   }
 
-  $self->sync->albums_by_link->{$self->link_self} = $self;
+    $self->sync->albums_by_link->{$self->link_self} = $self;
 
 }
 
@@ -127,14 +127,14 @@ sub load_photos {
     . '": load_photos while empty link_photos!' and return
     unless $self->link_photos;
 
-  $self->photos({});
+  $self->photos(Mojo::Collection->new);
   my $tmp_url = $self->link_photos;
 
   while ($tmp_url) {
     my $tx =
       $self->sync->ua->get(
       $tmp_url => {'Authorization' => 'OAuth ' . $self->sync->token});
-
+      
     warn "Album load photos error: "
       . $tx->error
       . "\nBody: "
@@ -146,9 +146,7 @@ sub load_photos {
     for my $entry (@{$entries}) {
       my $photo =
         Yandex::Fotki::Photo->new(sync => $self->sync, xml => $entry->to_xml);
-      
-      $photo->build_local_path;
-      $self->photos->{$photo->local_path} = $photo;
+      push @{$self->photos}, $photo;
 
     }
 
@@ -163,11 +161,10 @@ sub load_photos {
   }
 }
 
-sub build_local_path {
-  my $self = shift;
-  $self->SUPER::build_local_path;
-  $self->sync->albums_by_path->{$self->local_path} = $self
-    if $self->local_path;
+sub build_local_path{
+    my $self = shift;    
+    $self->SUPER::build_local_path;
+    $self->sync->albums_by_path->{$self->local_path} = $self if $self->local_path;    
 }
 
 1;

@@ -17,14 +17,17 @@ has link_original => '';
 sub parse {
   my ($self, $xml) = (shift, shift);
   return unless $xml;
-  
-  my $dom = $self->SUPER::parse($xml);
 
-  if (my $parent = $dom->at('link[rel="album"]')) {
+  $self->SUPER::parse($xml);
+
+  my $dom = Mojo::DOM->new($xml);
+
+  my $parent = $dom->at('link[rel="album"]');
+  if ($parent) {
     $self->link_album($parent->{href});
 
     my $album =
-      $self->sync->albums_by_link->{$self->link_album};
+      $self->sync->albums->first(sub { $_->link_self eq $self->link_album });
 
     unless ($album && $album->id) {
       $album = Yandex::Fotki::Album->new(
@@ -36,7 +39,8 @@ sub parse {
 
     $self->build_local_path;
 
-    $album->photos->{$self->local_path} = $self;
+    push @{$album->photos}, $self
+      unless $album->photos->first(sub { $_->link_self eq $self->link_self });
   }
 }
 
