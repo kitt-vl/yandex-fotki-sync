@@ -40,6 +40,17 @@ sub delete {
     {'Authorization' => 'OAuth ' . $self->sync->token});
 
   if ($tx->res->code == 204) {
+
+    my $child_str = '^' . quotemeta(''.$self->title .'/');
+    my $child_re = qr($child_str);
+
+    for my $child (grep {$_ =~ $child_re } keys $self->sync->albums_by_path)
+    {
+      my $child_link = $self->sync->albums_by_path->{$child}->link_self;
+      delete $self->sync->albums_by_link->{$child_link};  
+      delete $self->sync->albums_by_path->{$child};  
+    }
+
     delete $self->sync->albums_by_path->{$self->local_path};
     delete $self->sync->albums_by_link->{$self->link_self};
   }
@@ -96,7 +107,7 @@ ALBUM
     if $tx->error;
 
   $self->parse($tx->res->body);
-
+  $self->build_local_path;
   #say '   result: ' . $tx->res->code;
   #say '   link_self: ' . $self->link_self;
   return $self;
