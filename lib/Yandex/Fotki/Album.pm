@@ -43,7 +43,7 @@ sub delete {
 
     my $child_str = '^' . quotemeta(''.$self->title .'/');
     my $child_re = qr($child_str);
-
+    #quick and dirty remove child albums from cache
     for my $child (grep {$_ =~ $child_re } keys $self->sync->albums_by_path)
     {
       my $child_link = $self->sync->albums_by_path->{$child}->link_self;
@@ -110,6 +110,7 @@ ALBUM
   $self->build_local_path;
   #say '   result: ' . $tx->res->code;
   #say '   link_self: ' . $self->link_self;
+  say 'Album "' . $self->local_path . '" created';
   return $self;
 }
 

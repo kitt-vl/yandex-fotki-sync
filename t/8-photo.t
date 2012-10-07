@@ -59,7 +59,7 @@ my $album = $sync->albums_by_path->{$photo->parent_path};
 ok $album, 'Uploaded photo has album';
 
 $album->load_photos; 
-is scalar keys %{$album->photos}, 1, 'Right size of album photos collection';
+is scalar keys %{$album->photos}, 2, 'Right size of album photos collection';
 
 ################################################################################
 $local_photo = 't/суб дир 2/test sub dir3/image in subfolder 7.bmp';
@@ -72,11 +72,11 @@ $photo->upload;
 ok $photo->link_self,   'Uploaded file has link_self';
 
 $album->load_photos;
-is scalar keys %{$album->photos}, 2, 'Right size of album photos collection';
+is scalar keys %{$album->photos}, 4, 'Right size of album photos collection';
 
 my $code = $photo->delete;
 is $code, 204, 'Right delete response code';
-is scalar keys %{$album->photos}, 1, 'Right size of album photos collection after photo delete';
+is scalar keys %{$album->photos}, 2, 'Right size of album photos collection after photo delete';
 
 if( my $test = $sync->albums_by_path->{'t'})
 {

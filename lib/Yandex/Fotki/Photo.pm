@@ -5,6 +5,7 @@ package Yandex::Fotki::Photo;
 
 use Mojo::Base 'Yandex::Fotki::Base';
 use Mojo::DOM;
+use File::Spec;
 use Data::Dumper;
 
 has access           => 'private';
@@ -26,17 +27,12 @@ sub parse {
     my $album =
       $self->sync->albums_by_link->{$self->link_album};
 
-    unless ($album && $album->id) {
-      $album = Yandex::Fotki::Album->new(
-        link_self => $self->link_album,
-        sync      => $self->sync
-      );
-      $album->load_info;
-    }
-
+    die 'Album "' . $self->link_album . '" not found by in albums_by_link!' unless $album;
+    # $self->title($self->io->name) if $self->io;
     $self->build_local_path;
 
     $album->photos->{$self->local_path} = $self;
+    $album->photos->{$self->unsorted_path} = $self;
   }
 }
 
@@ -57,6 +53,20 @@ sub upload {
     $album->create unless $album->link_self;
   }
 
+  #check photo already exists
+  if(exists $album->photos->{$self->local_path} )
+  {
+    say 'Photo "' . $self->io->abs_path . '" already exists, skipping.';
+    $self =  $album->photos->{$self->local_path};
+    return $self;
+  }
+  elsif(exists $album->photos->{$self->unsorted_path} )
+  {
+    say 'Photo "' . $self->io->abs_path . '" already exists, skipping.';
+    $self =  $album->photos->{$self->unsorted_path};
+    return $self;
+  }
+  ###########################
   my $ua = $self->sync->ua;
 
   #say 'URL:' . $self->sync->photos_url;
@@ -65,6 +75,7 @@ sub upload {
   my $params = {image => {file => '' . $self->io->abs_path}};
 
   $params->{album} = $album->id if $album && $album->id;
+  $params->{title} = $self->io->name;
   $params->{'access'} = $self->sync->default_access;
 
  #say '=====================================================================';
@@ -78,7 +89,8 @@ sub upload {
   my $tx = $ua->post_form(
     $self->sync->photos_url => $params => {
       'Authorization' => 'OAuth ' . $self->sync->token,
-      'Content-Type'  => 'multipart/form-data'
+      #'Content-Type'  => 'multipart/form-data',
+
     }
   );
 
@@ -113,6 +125,7 @@ sub delete {
     if(my $parent = $self->sync->albums_by_link->{$self->link_album})
     {
         delete $parent->photos->{$self->local_path};
+        delete $parent->photos->{$self->unsorted_path};
     }
     $self->link_self('');
   }
@@ -120,4 +133,22 @@ sub delete {
   return $tx->res->code;
 }
 
+sub unsorted_path{
+  my $self= shift;
+  die 'unsorted_path: local_path is empty!' unless $self->local_path;
+
+  my @dir = File::Spec->splitdir($self->local_path);
+  my $file_name = pop @dir;
+  
+  push @dir, 'Неразобранное в ' . $dir[-1], $file_name;
+  return join('/', @dir);
+}
+
+sub remote_exists{
+  my $self = shift;
+
+  return 1 if $self->link_self;
+
+
+}
 1;

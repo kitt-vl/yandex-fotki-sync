@@ -4,6 +4,7 @@ use warnings;
 package Yandex::Fotki::Base;
 use Mojo::Base -base;
 use Mojo::DOM;
+use Mojo::Util qw(url_unescape);
 
 has id         => '';
 has author     => '';
@@ -52,6 +53,9 @@ sub parse {
   my $dom = Mojo::DOM->new($xml);
 
   if (my $entry = $dom->at('entry')) {
+    
+    say 'DOM hasnt id method: ' , $xml , '-------------------------' unless $entry->at('id');
+    
     $self->id($entry->id->text);
     $self->author($entry->author->name->text);
     $self->title($entry->title->text);
